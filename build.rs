@@ -2,15 +2,6 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Puts `soundpacks/` next to the built executable (`target/<profile>/`).
-///
-/// The app resolves its resources relative to the executable (see
-/// `get_app_root` in src/state/paths.rs), so a bare `cargo build` binary with
-/// no `soundpacks/` beside it loads zero packs and plays nothing. Packaged
-/// builds (.app, AppImage, installer) bundle their own copy; this only makes
-/// the plain `target/<profile>/mechvibes-dx` run out of the box.
-///
-/// Best effort: a failure here must never fail the build.
 fn sync_soundpacks() {
     println!("cargo:rerun-if-changed=soundpacks");
 
@@ -21,14 +12,10 @@ fn sync_soundpacks() {
         return;
     };
 
-    // OUT_DIR is target/<profile>/build/<pkg>-<hash>/out, so the profile
-    // directory (the one holding the executable) is three levels up.
     let Some(profile_dir) = out_dir.ancestors().nth(3) else {
         return;
     };
 
-    // `dx serve` builds under target/dx/ and runs with the project root as its
-    // app root, so it never reads this copy.
     if profile_dir.components().any(|c| c.as_os_str() == "dx") {
         return;
     }
@@ -43,8 +30,6 @@ fn sync_soundpacks() {
     }
 }
 
-/// Copies `src` into `dst`, skipping files whose size and mtime already match
-/// so repeat builds don't re-copy ~18 MB of audio. Never deletes anything.
 fn copy_changed(src: &Path, dst: &Path) -> io::Result<()> {
     fs::create_dir_all(dst)?;
     for entry in fs::read_dir(src)? {
@@ -74,21 +59,14 @@ fn copy_changed(src: &Path, dst: &Path) -> io::Result<()> {
 fn main() -> io::Result<()> {
     sync_soundpacks();
 
-    // Only compile resources on Windows
     #[cfg(windows)]
     {
         let mut res = winresource::WindowsResource::new();
-
-        // Set application icon
         res.set_icon("assets/icon.ico");
-
-        // Set application metadata
-        res.set("ProductName", "MechvibesDX");
-        res.set("FileDescription", "MechvibesDX - Interactive Sound Simulator");
-        res.set("CompanyName", "Hai Nguyen");
-        res.set("LegalCopyright", "Copyright (C) 2026 Hai Nguyen");
-
-        // Compile the resource file
+        res.set("ProductName", "Mercy");
+        res.set("FileDescription", "Mercy - Mechanical Keyboard Sound Simulator");
+        res.set("CompanyName", "Arean Max");
+        res.set("LegalCopyright", "Copyright (C) 2026 Arean Max");
         res.compile()?;
     }
 

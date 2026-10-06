@@ -1,5 +1,5 @@
 [application]
-name = "mechvibes-dx"
+name = "mercy"
 out_dir = "bundle"
 asset_dir = "assets"
 
@@ -7,14 +7,14 @@ asset_dir = "assets"
 bundle_assets = true
 
 [bundle]
-identifier = "com.hainguyents13.mechvibesdx"
-name = "MechvibesDX"
-version = "0.4.0"
-publisher = "Hai Nguyen"
+identifier = "com.areanmax.mercy"
+name = "Mercy"
+version = "0.8.3"
+publisher = "Arean Max"
 icon = ["./assets/icon.ico"]
 category = "Productivity"
-short_description = "MechvibesDX"
-long_description = "MechvibesDX is a modern, cross-platform interactive sound simulator for keyboard, mouse, and other input devices."
+short_description = "Mercy"
+long_description = "Mercy is an ultra-low latency mechanical keyboard sound simulator with customizable soundpacks."
 resources = [
   "./soundpacks/keyboard",
   "./soundpacks/mouse",
