@@ -107,3 +107,4 @@ inherits = "dev"
 
 [patch.crates-io]
 rdev = { path = "patches/rdev" }
+webview2-com-sys = { path = "patches/webview2-com-sys" }
