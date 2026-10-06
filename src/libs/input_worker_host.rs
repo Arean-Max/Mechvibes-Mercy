@@ -231,10 +231,17 @@ enum PumpExit {
 
 fn spawn_worker() -> std::io::Result<Child> {
     let exe = std::env::current_exe()?;
+    let dedicated = exe.with_file_name("mercy-worker.exe");
 
-    Command::new(exe)
-        .arg(WORKER_ARG)
-        .stdin(Stdio::piped()) // never written to - it is the worker's EOF lifeline
+    let mut cmd = if dedicated.is_file() {
+        Command::new(dedicated)
+    } else {
+        let mut c = Command::new(exe);
+        c.arg(WORKER_ARG);
+        c
+    };
+
+    cmd.stdin(Stdio::piped()) // never written to - it is the worker's EOF lifeline
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .creation_flags(CREATE_NO_WINDOW)
