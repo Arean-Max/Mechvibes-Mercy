@@ -308,7 +308,7 @@ fn LogoCustomizationPanel() -> Element {
                     },
                     logo().shadow_color,
                 ),
-                "Mechvibes"
+                "Mercy"
               }
             }
             // Muted state preview
@@ -336,7 +336,7 @@ fn LogoCustomizationPanel() -> Element {
                         format!("background: {}", logo().muted_background)
                     },
                 ),
-                "Mechvibes"
+                "Mercy"
               }
             }
           }
