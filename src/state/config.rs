@@ -143,17 +143,6 @@ pub struct AppConfig {
     pub start_minimized: bool, // Start minimized to tray when auto-starting with Windows
     pub landscape_mode: bool, // Enable/disable landscape mode layout
     pub auto_update: AutoUpdateConfig, // Auto-update settings
-    /// Send one anonymous launch event (OS + app version) per start.
-    /// Opt-out, so an absent field must land on `true` - `bool::default()`
-    /// would silently opt the user out on upgrade from a config predating it.
-    #[serde(default = "default_true")]
-    pub enable_telemetry: bool,
-}
-
-/// serde default for opt-out booleans, which have no `#[derive(Default)]`
-/// equivalent since `bool::default()` is `false`.
-fn default_true() -> bool {
-    true
 }
 
 /// Parse a config document, discarding only the entries that cannot be read.
@@ -291,7 +280,6 @@ impl AppConfig {
             && self.start_minimized == other.start_minimized
             && self.landscape_mode == other.landscape_mode
             && self.auto_update == other.auto_update
-            && self.enable_telemetry == other.enable_telemetry
     }
 
     pub fn load() -> Self {
@@ -470,8 +458,7 @@ impl Default for AppConfig {
             auto_start: false,
             start_minimized: false, // Default to not starting minimized
             landscape_mode: false, // Default landscape mode disabled
-            auto_update: AutoUpdateConfig::default(), // Default auto-update settings
-            enable_telemetry: true, // Opt-out: on by default, disclosed in README and Settings
+            auto_update: AutoUpdateConfig::default(),
         }
     }
 }
@@ -513,39 +500,7 @@ mod tests {
         );
     }
 
-    /// Telemetry is opt-out, so a fresh install must have it on. If this ever
-    /// flips, the README and the Settings caption both become lies.
-    #[test]
-    fn telemetry_defaults_to_on() {
-        assert!(AppConfig::default().enable_telemetry);
-    }
 
-    /// A config written before `enable_telemetry` existed must still load. The
-    /// load path resets *every* setting on a deserialize error, so a missing
-    /// `#[serde(default)]` here would wipe the user's whole config on upgrade.
-    #[test]
-    fn a_config_without_the_telemetry_field_still_loads() {
-        let mut value = serde_json::to_value(AppConfig::default()).expect("config serializes");
-        value.as_object_mut().expect("config is a json object").remove("enable_telemetry");
-
-        let restored: AppConfig = serde_json
-            ::from_value(value)
-            .expect("configs predating enable_telemetry must deserialize, not reset");
-
-        assert!(restored.enable_telemetry, "an absent field must default to on, not to false");
-    }
-
-    /// `data_equals` drives whether a change is persisted at all. A field
-    /// missing from it means the Settings toggle appears to work and is
-    /// silently forgotten on restart.
-    #[test]
-    fn toggling_telemetry_counts_as_a_change_worth_saving() {
-        let original = AppConfig::default();
-        let mut toggled = original.clone();
-        toggled.enable_telemetry = !original.enable_telemetry;
-
-        assert!(!toggled.data_equals(&original), "the toggle must mark the config dirty");
-    }
 
     /// The fix: re-read immediately before mutating, so the concurrent change
     /// is already present in the struct that gets written back.
@@ -665,16 +620,7 @@ mod tests {
         assert!(parse_lenient("{\"volume\": 0.5").is_err(), "a truncated document must fail");
     }
 
-    /// The opt-out flag must land on `true` when its stored value is damaged,
-    /// exactly as when the key is absent - a fallback to `bool::default()`
-    /// would silently opt the user out.
-    #[test]
-    fn a_damaged_telemetry_flag_stays_opted_in() {
-        let document = config_json_with(&[("enable_telemetry", serde_json::json!("yes"))]);
-        let restored = parse_lenient(&document).expect("a damaged flag must not fail the document");
 
-        assert!(restored.enable_telemetry, "the opt-out default must survive a damaged value");
-    }
 
     /// The destructive case the fix targets: a document too damaged to parse
     /// at all. The user's bytes must end up in `.corrupt`, and the original
