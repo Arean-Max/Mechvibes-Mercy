@@ -160,9 +160,9 @@ impl SoundpackCache {
             }
         };
 
-        // Auto-refresh if cache is empty or missing
-        if cache.soundpacks.is_empty() {
-            crate::always_print!("🔄 Cache is empty, refreshing from soundpack directories...");
+        // Auto-refresh if cache is empty, missing, or has no keyboard packs
+        if cache.soundpacks.is_empty() || cache.count.keyboard == 0 {
+            crate::always_print!("🔄 Cache is empty or missing keyboard packs, refreshing from soundpack directories...");
             cache.refresh_from_directory();
             cache.save();
         }

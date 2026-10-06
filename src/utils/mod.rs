@@ -10,6 +10,7 @@ pub mod logger;
 pub mod path;
 pub mod platform;
 pub mod soundpack;
+pub mod soundpack_bundle;
 pub mod soundpack_installer;
 pub mod soundpack_validator;
 pub mod spacing;

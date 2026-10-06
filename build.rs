@@ -94,8 +94,63 @@ fn sync_webview2_loader() {
     }
 }
 
+fn package_default_soundpacks() -> io::Result<()> {
+    println!("cargo:rerun-if-changed=soundpacks");
+
+    let out_dir = PathBuf::from(
+        std::env::var("OUT_DIR").map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+    );
+    let zip_path = out_dir.join("default_soundpacks.zip");
+
+    let manifest_dir = PathBuf::from(
+        std::env::var("CARGO_MANIFEST_DIR").map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+    );
+    let soundpacks_src = manifest_dir.join("soundpacks");
+    if !soundpacks_src.is_dir() {
+        return Ok(());
+    }
+
+    let file = fs::File::create(&zip_path)?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
+    fn add_dir(
+        zip: &mut zip::ZipWriter<fs::File>,
+        base: &Path,
+        current: &Path,
+        options: zip::write::SimpleFileOptions,
+    ) -> io::Result<()> {
+        for entry in fs::read_dir(current)? {
+            let entry = entry?;
+            let path = entry.path();
+            let relative = path
+                .strip_prefix(base)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            let relative_str = relative.to_string_lossy().replace('\\', "/");
+
+            if path.is_dir() {
+                zip.add_directory(&relative_str, options)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                add_dir(zip, base, &path, options)?;
+            } else if path.is_file() {
+                zip.start_file(&relative_str, options)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                let mut f = fs::File::open(&path)?;
+                io::copy(&mut f, zip)?;
+            }
+        }
+        Ok(())
+    }
+
+    add_dir(&mut zip, &soundpacks_src, &soundpacks_src, options)?;
+    zip.finish().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    Ok(())
+}
+
 fn main() -> io::Result<()> {
     sync_soundpacks();
+    package_default_soundpacks()?;
 
     #[cfg(windows)]
     {

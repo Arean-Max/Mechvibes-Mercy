@@ -583,34 +583,28 @@ pub mod soundpacks {
     /// Checks built-in location first, then custom location
     /// soundpack_id format: "keyboard/Soundpack Name" or "mouse/Soundpack Name"
     pub fn soundpack_dir(soundpack_id: &str) -> String {
-        // Normalize the soundpack_id by splitting on both / and \ and rejoining with PathBuf
         let parts: Vec<&str> = soundpack_id.split(&['/', '\\'][..]).collect();
 
-        // Check if it's a built-in soundpack
-        if is_builtin_soundpack(soundpack_id) {
-            let mut path = get_builtin_soundpacks_dir();
-            for part in parts {
-                path = path.join(part);
-            }
-            path.to_string_lossy().to_string()
-        } else {
-            // Check custom location first
-            let mut custom_path = get_custom_soundpacks_dir();
-            for part in &parts {
-                custom_path = custom_path.join(part);
-            }
-
-            if custom_path.exists() {
-                custom_path.to_string_lossy().to_string()
-            } else {
-                // Fallback to built-in location (for backwards compatibility)
-                let mut builtin_path = get_builtin_soundpacks_dir();
-                for part in parts {
-                    builtin_path = builtin_path.join(part);
-                }
-                builtin_path.to_string_lossy().to_string()
-            }
+        // 1. Check built-in location first
+        let mut builtin_path = get_builtin_soundpacks_dir();
+        for part in &parts {
+            builtin_path = builtin_path.join(part);
         }
+        if builtin_path.exists() {
+            return builtin_path.to_string_lossy().to_string();
+        }
+
+        // 2. Check custom location (system app data)
+        let mut custom_path = get_custom_soundpacks_dir();
+        for part in &parts {
+            custom_path = custom_path.join(part);
+        }
+        if custom_path.exists() {
+            return custom_path.to_string_lossy().to_string();
+        }
+
+        // 3. Fallback to built-in path
+        builtin_path.to_string_lossy().to_string()
     }
 
     /// Get config.json path for a specific soundpack
@@ -750,6 +744,19 @@ pub mod soundpacks {
                 "🖱️ Created custom mouse soundpacks directory: {}",
                 custom_mouse_dir.display()
             );
+        }
+
+        // Auto-extract embedded default soundpacks if neither built-in nor custom location has soundpacks
+        let builtin_has_packs = builtin_soundpacks_dir
+            .join("keyboard")
+            .read_dir()
+            .map(|mut entries| entries.next().is_some())
+            .unwrap_or(false);
+
+        if !builtin_has_packs {
+            if let Err(e) = crate::utils::soundpack_bundle::ensure_default_soundpacks_extracted(&custom_soundpacks_dir) {
+                crate::always_eprint!("⚠️ Failed to extract embedded soundpacks: {}", e);
+            }
         }
 
         Ok(())
@@ -1512,5 +1519,12 @@ mod tests {
                 exe
             );
         }
+    }
+
+    #[test]
+    fn soundpack_dir_resolves_valid_path() {
+        let dir = soundpacks::soundpack_dir("keyboard/cherrymx-black-abs");
+        assert!(!dir.is_empty());
+        assert!(dir.contains("cherrymx-black-abs"));
     }
 }
