@@ -26,7 +26,7 @@ The legacy Electron-based Mechvibes suffered from bloated memory consumption (15
 ## ✨ Features
 
 - **⚡ 0% FPS & CPU Impact**: Utilizes native **Windows Raw Input** without blocking `WH_KEYBOARD_LL` hooks, preventing input lag and anti-cheat conflicts.
-- **🛡️ 100% Privacy & Zero Telemetry**: Completely purged third-party analytics (Aptabase) and background network threads. Fully offline and private.
+- **🛡️ 100% FOSS & Zero Telemetry**: Truly open-source without third-party trackers, analytics, or network pings. Fully offline and private.
 - **🪶 Minimal RAM Footprint**: Consumes only **25–40 MB RAM**, compared to 200+ MB for Electron/Chromium apps.
 - **🎧 Ultra-Low Latency Audio**: Dedicated real-time OS audio thread powered by lock-free channels. Sounds trigger in <5–10 ms.
 - **🔊 32-Voice Polyphony**: Crisp, simultaneous playback during fast typing without clipping, pops, or stutters.
