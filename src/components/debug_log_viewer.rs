@@ -1,24 +1,3 @@
-//! The Debug section's live log viewer, export button and verbose toggle.
-//!
-//! # Why polling rather than a subscription
-//!
-//! Log lines are produced on threads that cannot touch a Dioxus `Signal` (the
-//! audio engine thread, the worker-host reader, detached update/telemetry
-//! threads), exactly as with the config in `libs/ui.rs`. So the viewer follows
-//! the same house pattern: the buffer bumps an atomic counter on every push,
-//! and this component polls that counter. One atomic load per tick, and the
-//! lines are only cloned when the counter actually moved.
-//!
-//! # Cost when the section is closed
-//!
-//! The poll lives in a `use_future` owned by this component, so it stops when
-//! the component unmounts. That unmount is not automatic: the surrounding
-//! `Collapse` is a DaisyUI CSS accordion, which normally keeps every section's
-//! children in the DOM and only hides them with stylesheet rules. The Debug
-//! section therefore passes `lazy_children: true`, which is what actually
-//! mounts this component on expand and drops it (and this future) on collapse.
-//! Removing that flag would silently leave the poll running for every user.
-
 use crate::components::ui::Toggler;
 use crate::utils::delay;
 use crate::utils::log_buffer;

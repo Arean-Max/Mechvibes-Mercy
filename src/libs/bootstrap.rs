@@ -1,15 +1,3 @@
-//! Startup wiring shared by the GUI and headless launch paths.
-//!
-//! Input capture is the one part of startup both modes need to be identical.
-//! Duplicating it would let the two drift - and the way it drifts is
-//! predictable: whoever writes the second copy reaches for the simplest
-//! listener that compiles, which on Windows is the rdev fallback, and ships a
-//! mode that eats dead keys and delays clicks (phase 06). One function, called
-//! from both, makes that impossible.
-//!
-//! Only capture lives here. The window, tray, ambiance player, telemetry and
-//! update checker are GUI-only and stay in `main()`.
-
 use crossbeam_channel::Sender;
 
 /// Starts platform input capture, feeding the three channels the audio engine
