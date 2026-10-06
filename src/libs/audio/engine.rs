@@ -1,5 +1,4 @@
 use crossbeam_channel::{ unbounded, Receiver, Sender };
-use rodio::buffer::SamplesBuffer;
 use rodio::{ OutputStream, OutputStreamHandle, Sink };
 use std::collections::HashMap;
 use std::sync::{ Arc, OnceLock };
@@ -299,9 +298,12 @@ fn should_play(sound_enabled: bool, type_enabled: bool) -> bool {
 /// Marks `code` pressed/released, returning `false` if this event should be
 /// ignored (duplicate keydown, or keyup with no matching keydown).
 fn debounce_press(pressed: &mut HashMap<String, bool>, code: &str, down: bool) -> bool {
-    let was_down = *pressed.get(code).unwrap_or(&false);
-    if down == was_down {
-        return false;
+    if let Some(was_down) = pressed.get_mut(code) {
+        if *was_down == down {
+            return false;
+        }
+        *was_down = down;
+        return true;
     }
     pressed.insert(code.to_string(), down);
     true
@@ -326,6 +328,114 @@ fn lookup_timing(map: &HashMap<String, Vec<[f32; 2]>>, code: &str, down: bool) -
     }
 }
 
+struct AudioSliceSource {
+    samples: Arc<Vec<f32>>,
+    cursor: usize,
+    end: usize,
+    channels: u16,
+    sample_rate: u32,
+    fade_in_frames: usize,
+    fade_out_frames: usize,
+    total_frames: usize,
+    current_frame: usize,
+    channel_idx: u16,
+}
+
+impl AudioSliceSource {
+    fn new(
+        samples: Arc<Vec<f32>>,
+        start_sample: usize,
+        end_sample: usize,
+        channels: u16,
+        sample_rate: u32,
+    ) -> Self {
+        let channels = channels.max(1);
+        let sample_count = end_sample.saturating_sub(start_sample);
+        let total_frames = sample_count / (channels as usize);
+
+        let mut fade_in_frames = ((FADE_IN_MS / 1000.0) * (sample_rate as f32)) as usize;
+        let mut fade_out_frames = ((FADE_OUT_MS / 1000.0) * (sample_rate as f32)) as usize;
+        let half = total_frames / 2;
+        if fade_in_frames > half {
+            fade_in_frames = half;
+        }
+        if fade_out_frames > half {
+            fade_out_frames = half;
+        }
+
+        Self {
+            samples,
+            cursor: start_sample,
+            end: end_sample,
+            channels,
+            sample_rate,
+            fade_in_frames,
+            fade_out_frames,
+            total_frames,
+            current_frame: 0,
+            channel_idx: 0,
+        }
+    }
+}
+
+impl Iterator for AudioSliceSource {
+    type Item = f32;
+
+    #[inline]
+    fn next(&mut self) -> Option<f32> {
+        if self.cursor >= self.end || self.cursor >= self.samples.len() {
+            return None;
+        }
+
+        let raw = self.samples[self.cursor];
+        self.cursor += 1;
+
+        let gain = if self.fade_in_frames > 0 && self.current_frame < self.fade_in_frames {
+            (self.current_frame as f32) / (self.fade_in_frames as f32)
+        } else if self.fade_out_frames > 0
+            && self.current_frame >= self.total_frames.saturating_sub(self.fade_out_frames)
+        {
+            let rem = self.total_frames.saturating_sub(self.current_frame);
+            (rem as f32) / (self.fade_out_frames as f32)
+        } else {
+            1.0
+        };
+
+        self.channel_idx += 1;
+        if self.channel_idx >= self.channels {
+            self.channel_idx = 0;
+            self.current_frame += 1;
+        }
+
+        Some(raw * gain)
+    }
+}
+
+impl rodio::Source for AudioSliceSource {
+    #[inline]
+    fn current_frame_len(&self) -> Option<usize> {
+        let remaining_samples = self.end.saturating_sub(self.cursor);
+        Some(remaining_samples / (self.channels as usize))
+    }
+
+    #[inline]
+    fn channels(&self) -> u16 {
+        self.channels
+    }
+
+    #[inline]
+    fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
+    #[inline]
+    fn total_duration(&self) -> Option<std::time::Duration> {
+        let total_samples = self.end.saturating_sub(self.cursor);
+        let frames = total_samples / (self.channels as usize);
+        Some(std::time::Duration::from_secs_f64((frames as f64) / (self.sample_rate as f64)))
+    }
+}
+
 fn play_segment(
     stream_handle: &OutputStreamHandle,
     samples: &Option<DecodedAudio>,
@@ -338,7 +448,6 @@ fn play_segment(
     let Some((samples_arc, channels, sample_rate)) = samples else {
         return;
     };
-    let samples: &Vec<f32> = samples_arc.as_ref();
     let channels = *channels;
     let sample_rate = *sample_rate;
 
@@ -349,76 +458,41 @@ fn play_segment(
 
     let start_sample = ((start_ms / 1000.0) * (sample_rate as f32) * (channels as f32)) as usize;
     let end_sample = ((end_ms / 1000.0) * (sample_rate as f32) * (channels as f32)) as usize;
-    let end_sample = end_sample.min(samples.len());
+    let end_sample = end_sample.min(samples_arc.len());
     if start_sample >= end_sample {
         crate::always_eprint!(
             "❌ [AudioEngine] Invalid sample range for '{}': {}..{} (max {})",
             code,
             start_sample,
             end_sample,
-            samples.len()
+            samples_arc.len()
         );
         return;
     }
 
-    let mut segment_samples = samples[start_sample..end_sample].to_vec();
-    apply_fade(&mut segment_samples, channels, sample_rate);
-    let segment = SamplesBuffer::new(channels, sample_rate, segment_samples);
+    manage_active_sinks(sinks, MAX_VOICES);
 
     if let Ok(sink) = Sink::try_new(stream_handle) {
         sink.set_volume(volume);
-        sink.append(segment);
-
-        manage_active_sinks(sinks, MAX_VOICES);
+        let source = AudioSliceSource::new(
+            samples_arc.clone(),
+            start_sample,
+            end_sample,
+            channels,
+            sample_rate,
+        );
+        sink.append(source);
         sinks.push(sink);
     }
 }
 
-/// Applies a linear fade-in/fade-out to interleaved PCM samples in place.
-/// Operates per-frame (one frame = `channels` consecutive samples) so all
-/// channels in a frame share the same gain and stay in phase.
-fn apply_fade(samples: &mut [f32], channels: u16, sample_rate: u32) {
-    let channels = channels.max(1) as usize;
-    let frame_count = samples.len() / channels;
-    if frame_count == 0 {
-        return;
-    }
-
-    let mut fade_in_frames = ((FADE_IN_MS / 1000.0) * (sample_rate as f32)) as usize;
-    let mut fade_out_frames = ((FADE_OUT_MS / 1000.0) * (sample_rate as f32)) as usize;
-
-    let half = frame_count / 2;
-    if fade_in_frames > half {
-        fade_in_frames = half;
-    }
-    if fade_out_frames > half {
-        fade_out_frames = half;
-    }
-
-    for frame in 0..fade_in_frames {
-        let gain = (frame as f32) / (fade_in_frames as f32);
-        let base = frame * channels;
-        for c in 0..channels {
-            samples[base + c] *= gain;
-        }
-    }
-
-    for frame in 0..fade_out_frames {
-        let gain = (frame as f32) / (fade_out_frames as f32);
-        let frame_idx = frame_count - 1 - frame;
-        let base = frame_idx * channels;
-        for c in 0..channels {
-            samples[base + c] *= gain;
-        }
-    }
-}
-
 fn manage_active_sinks(sinks: &mut Vec<Sink>, max_voices: usize) {
-    sinks.retain(|s| !s.empty());
-
     if sinks.len() >= max_voices {
-        let old_sink = sinks.remove(0);
-        old_sink.stop();
+        sinks.retain(|s| !s.empty());
+        while sinks.len() >= max_voices {
+            let old_sink = sinks.remove(0);
+            old_sink.stop();
+        }
     }
 }
 
@@ -445,11 +519,11 @@ fn resample_if_needed(
 /// Parses the `"KeyA"` / `"UP:KeyA"` wire format the input listeners
 /// (rdev, device_query, evdev) already send, same as the pre-Phase-3 UI
 /// polling loops in `ui.rs` did.
-fn parse_input_event(raw: &str) -> Option<(String, bool)> {
+fn parse_input_event(raw: &str) -> Option<(&str, bool)> {
     if let Some(code) = raw.strip_prefix("UP:") {
-        Some((code.to_string(), false))
+        Some((code, false))
     } else if !raw.is_empty() {
-        Some((raw.to_string(), true))
+        Some((raw, true))
     } else {
         None
     }
@@ -602,19 +676,19 @@ fn run_engine(
             recv(keyboard_rx) -> msg => {
                 if let Ok(raw) = msg {
                     if let Some((code, down)) = parse_input_event(&raw) {
-                        crate::libs::trace::record(crate::libs::trace::Point::EngineDequeue, &code, 0.0);
-                        crate::libs::trace::time(crate::libs::trace::Point::PlayedSound, &code, || {
-                            state.handle_key_event(&code, down);
+                        crate::libs::trace::record(crate::libs::trace::Point::EngineDequeue, code, 0.0);
+                        crate::libs::trace::time(crate::libs::trace::Point::PlayedSound, code, || {
+                            state.handle_key_event(code, down);
                         });
-                        crate::libs::trace::record(crate::libs::trace::Point::UiEventSent, &code, 0.0);
-                        let _ = event_tx.send(if down { UiEvent::KeyDown(code) } else { UiEvent::KeyUp(code) });
+                        crate::libs::trace::record(crate::libs::trace::Point::UiEventSent, code, 0.0);
+                        let _ = event_tx.send(if down { UiEvent::KeyDown(code.to_string()) } else { UiEvent::KeyUp(code.to_string()) });
                     }
                 }
             }
             recv(mouse_rx) -> msg => {
                 if let Ok(raw) = msg {
                     if let Some((code, down)) = parse_input_event(&raw) {
-                        state.handle_mouse_event(&code, down);
+                        state.handle_mouse_event(code, down);
                     }
                 }
             }
@@ -750,5 +824,26 @@ mod tests {
         assert!(!mouse_sound_enabled);
         assert!(!should_play(sound_enabled, keyboard_sound_enabled));
         assert!(!should_play(sound_enabled, mouse_sound_enabled));
+    }
+
+    #[test]
+    fn audio_slice_source_yields_exact_samples_and_applies_fades() {
+        use rodio::Source;
+        let original_data = vec![1.0f32; 480]; // 10ms at 48kHz mono
+        let samples = Arc::new(original_data);
+        let mut source = AudioSliceSource::new(samples, 0, 480, 1, 48000);
+
+        assert_eq!(source.channels(), 1);
+        assert_eq!(source.sample_rate(), 48000);
+
+        let out_samples: Vec<f32> = source.by_ref().collect();
+        assert_eq!(out_samples.len(), 480);
+
+        // First sample should start faded at 0.0
+        assert_eq!(out_samples[0], 0.0);
+        // Middle samples should be full gain (1.0)
+        assert_eq!(out_samples[240], 1.0);
+        // Last sample should be faded down
+        assert!(out_samples[479] < 0.1);
     }
 }
