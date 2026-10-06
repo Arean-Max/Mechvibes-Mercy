@@ -56,11 +56,51 @@ fn copy_changed(src: &Path, dst: &Path) -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(windows)]
+fn sync_webview2_loader() {
+    println!("cargo:rerun-if-changed=assets/windows/WebView2Loader.dll");
+
+    let (Some(out_dir), Some(manifest_dir)) = (
+        std::env::var_os("OUT_DIR").map(PathBuf::from),
+        std::env::var_os("CARGO_MANIFEST_DIR").map(PathBuf::from),
+    ) else {
+        return;
+    };
+
+    let Some(profile_dir) = out_dir.ancestors().nth(3) else {
+        return;
+    };
+
+    if profile_dir.components().any(|c| c.as_os_str() == "dx") {
+        return;
+    }
+
+    let src = manifest_dir
+        .join("assets")
+        .join("windows")
+        .join("WebView2Loader.dll");
+    if !src.is_file() {
+        return;
+    }
+
+    let dst = profile_dir.join("WebView2Loader.dll");
+    let up_to_date = match (fs::metadata(&src), fs::metadata(&dst)) {
+        (Ok(s), Ok(d)) => s.len() == d.len(),
+        _ => false,
+    };
+
+    if !up_to_date {
+        let _ = fs::copy(&src, &dst);
+    }
+}
+
 fn main() -> io::Result<()> {
     sync_soundpacks();
 
     #[cfg(windows)]
     {
+        sync_webview2_loader();
+
         let mut res = winresource::WindowsResource::new();
         res.set_icon("assets/icon.ico");
         res.set("ProductName", "Mercy");
