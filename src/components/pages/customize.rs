@@ -79,22 +79,6 @@ fn ImagePicker(
 
 #[component]
 pub fn CustomizePage() -> Element {
-    // let (config, update_config) = use_config();
-    // let mut saving = use_signal(|| false);
-
-    // let custom_css = use_memo(move || config().custom_css.clone());
-    // let mut css_input = use_signal(|| custom_css());
-    // let on_save = move |_| {
-    //     let css = css_input().clone();
-    //     update_config(Box::new(move |cfg| {
-    //         cfg.custom_css = css;
-    //     }));
-    //     saving.set(true);
-    //     spawn(async move {
-    //         futures_timer::Delay::new(std::time::Duration::from_millis(1500)).await;
-    //         saving.set(false);
-    //     });
-    // };
     rsx! {
       div { class: "",
         PageHeader {

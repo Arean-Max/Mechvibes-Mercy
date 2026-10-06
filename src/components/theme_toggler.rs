@@ -249,7 +249,7 @@ fn CreateThemeButton(props: CreateThemeButtonProps) -> Element {
         }
         a {
           class: "btn btn-ghost btn-sm",
-          href: "https://mechvibes.com/themes?utm_source=mechvibes&utm_medium=app&utm_campaign=theme_creator",
+          href: "https://mechvibes.com/themes",
           target: "_blank",
           rel: "noopener noreferrer",
           "Browse themes"
@@ -415,7 +415,7 @@ fn ThemeCreatorModal(props: ThemeCreatorModalProps) -> Element {
             div { class: "flex justify-between gap-2",
               a {
                 class: "btn btn-ghost btn-sm",
-                href: "https://mechvibes.com/theme-editor?utm_source=mechvibes&utm_medium=app&utm_campaign=theme_creator",
+                href: "https://mechvibes.com/theme-editor",
                 target: "_blank",
                 rel: "noopener noreferrer",
                 "Advanced editor"

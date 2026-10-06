@@ -157,11 +157,11 @@ pub fn WindowController() -> Element {
                             }
                         }
                         TrayMessage::OpenWebsite => {
-                            let url = "https://mechvibes.com";
+                            let url = "https://github.com/Arean-Max/Mechvibes-Mercy";
                             if let Err(e) = open::that(url) {
-                                crate::always_eprint!("❌ Failed to open website URL: {}", e);
+                                crate::always_eprint!("❌ Failed to open repository URL: {}", e);
                             } else {
-                                crate::always_print!("🌐 Opened official website in browser");
+                                crate::always_print!("🌐 Opened repository in browser");
                             }
                         }
                         TrayMessage::Exit => {

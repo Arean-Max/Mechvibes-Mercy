@@ -208,14 +208,14 @@ pub fn SoundpackManager(on_import_click: EventHandler<MouseEvent>) -> Element {
           div { class: "flex items-center gap-2",
             a {
               class: "btn btn-soft btn-sm",
-              href: "https://mechvibes.com/sound-packs?utm_source=mechvibes&utm_medium=app&utm_campaign=soundpack_manager",
+              href: "https://mechvibes.com/sound-packs",
               target: "_blank",
               "Browse sound packs"
               ExternalLink { class: "w-4 h-4 ml-1" }
             }
             a {
               class: "btn btn-soft btn-sm",
-              href: "https://beta.mechvibes.com/editor?utm_source=mechvibes&utm_medium=app&utm_campaign=soundpack_manager",
+              href: "https://beta.mechvibes.com/editor",
               target: "_blank",
               "Open Editor"
               ExternalLink { class: "w-4 h-4 ml-1" }
