@@ -1,83 +1,48 @@
-<div align="center">
+# Mercy
 
-# ⌨️ Mercy
+Lightweight mechanical keyboard and mouse sound simulator written in Rust.
 
-**Next-generation ultra-low latency mechanical keyboard and mouse sound simulator**
+Fork of [Mechvibes](https://github.com/hainguyents13/mechvibes-dx), focused on minimal resource usage, zero audio latency, and completely offline operation.
 
-[![Rust](https://img.shields.io/badge/Rust-1.88+-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org/)
-[![Dioxus](https://img.shields.io/badge/GUI-Dioxus_0.7-blue.svg?style=flat-square)](https://dioxuslabs.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg?style=flat-square)](#)
+[Русская версия](README.md)
 
-[Русская версия](README.md) • [Download](#-download) • [Features](#-features) • [Building](#-building)
+## Features
 
-</div>
+* **Low memory footprint** — ~25-40 MB RAM instead of 150-300+ MB on Electron.
+* **Low audio latency** — dedicated background audio thread with sub-10ms response time during fast typing.
+* **0% FPS / anti-cheat impact** — captures input via native Windows Raw Input without blocking global hooks (`WH_KEYBOARD_LL`).
+* **Keyboard & mouse sounds** — independent volume controls and soundpacks for keystrokes and mouse clicks.
+* **32-voice polyphony** — clean playback without pops, clipping, or cutoffs.
+* **100% FOSS & no telemetry** — all trackers, network telemetry, and analytics (Aptabase) removed.
+* **Universal soundpack support** — loads Mechvibes v1 and v2 soundpacks (WAV, MP3, OGG, FLAC).
+* **Hotkeys** — toggle mute with `Ctrl+Alt+M`, minimize to system tray.
 
----
+## Download & Run
 
-## 🚀 About
+Prebuilt packages are available on the [Releases](https://github.com/Arean-Max/Mechvibes-Mercy/releases) page:
 
-**Mercy** is a modern, lightweight mechanical keyboard sound simulator rewritten in pure **Rust** with native **Dioxus** UI.
+* Download `Mercy-v0.8.3-windows-x64.zip`.
+* Extract it anywhere and run `mercy.exe`.
 
-The legacy Electron-based Mechvibes suffered from bloated memory consumption (150–300+ MB), audio micro-delays during fast typing, and risks of anti-cheat false positives caused by intrusive low-level keyboard hooks. **Mercy** solves all of these architectural bottlenecks, providing native responsiveness and 0% FPS impact in games.
+Default soundpacks are included out-of-the-box in the `soundpacks/` folder.
 
----
+## Adding Soundpacks
 
-## ✨ Features
+1. Drag and drop any soundpack folder directly into the app window, or go to **Settings -> Soundpacks -> Import Soundpack**.
+2. Custom soundpacks are stored in `%APPDATA%\Mechvibes\soundpacks` or in the local `soundpacks/` folder next to the executable.
 
-- **⚡ 0% FPS & CPU Impact**: Utilizes native **Windows Raw Input** without blocking `WH_KEYBOARD_LL` hooks, preventing input lag and anti-cheat conflicts.
-- **🛡️ 100% FOSS & Zero Telemetry**: Truly open-source without third-party trackers, analytics, or network pings. Fully offline and private.
-- **🪶 Minimal RAM Footprint**: Consumes only **25–40 MB RAM**, compared to 200+ MB for Electron/Chromium apps.
-- **🎧 Ultra-Low Latency Audio**: Dedicated real-time OS audio thread powered by lock-free channels. Sounds trigger in <5–10 ms.
-- **🔊 32-Voice Polyphony**: Crisp, simultaneous playback during fast typing without clipping, pops, or stutters.
-- **🖱️ Keyboard & Mouse Sounds**: Granular volume controls and soundpack selection for both keyboard keystrokes and mouse clicks.
-- **📁 Universal Soundpack Support**: Compatible with classic Mechvibes (V1) and modern V2 formats, supporting WAV, OGG, MP3, and FLAC.
-- **🎛️ Convenient Controls**: Instant mute hotkey (`Ctrl+Alt+M`), system tray integration, themes, and logo customization.
+## Building from Source
 
----
+Requires [Rust](https://rustup.rs/) (1.88+):
 
-## 📥 Download
-
-Prebuilt release binaries are available under [Releases](https://github.com/Arean-Max/Mechvibes-Mercy/releases):
-
-| Platform | Binary | Notes |
-| :--- | :--- | :--- |
-| **Windows x64** | [**`Mercy-v0.8.3-windows-x64.zip`**](https://github.com/Arean-Max/Mechvibes-Mercy/releases/latest) | Portable archive (extract and run `mercy.exe`) |
-
----
-
-## 🛠️ Building from Source
-
-### Prerequisites
-- [Rust toolchain](https://rustup.rs/) (1.88 or newer)
-- Windows SDK / Visual Studio C++ Build Tools (on Windows)
-
-### Build Command
 ```bash
-# Clone the repository
 git clone https://github.com/Arean-Max/Mechvibes-Mercy.git
 cd Mechvibes-Mercy
-
-# Build optimized release binary
 cargo build --release
 ```
 
-The compiled binary will be located at:
-```
-target/release/mercy.exe
-```
+The compiled binary will be located at `target/release/mercy.exe`.
 
----
+## License
 
-## 🎹 Adding Soundpacks
-
-Import soundpacks by dragging and dropping the folder into the app window, or via settings:
-1. Open **Settings** -> **Soundpacks** -> **Import Soundpack**.
-2. Select the soundpack directory.
-3. Mercy will automatically validate and load the soundpack.
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE). Based on [mechvibes-dx](https://github.com/hainguyents13/mechvibes-dx) by Hai Nguyen.
