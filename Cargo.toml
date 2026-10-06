@@ -1,13 +1,11 @@
 [package]
-name = "mechvibes-dx"
-version = "0.8.2"
-authors = ["Hải Nguyễn <hainguyen.ts13@gmail.com>"]
+name = "mercy"
+version = "0.8.3"
+authors = ["Arean-max <arean-max@users.noreply.github.com>"]
 edition = "2024"
 rust-version = "1.88"
-description = "A modern mechanical keyboard sound simulator with customizable soundpacks"
+description = "Ultra-low latency mechanical keyboard sound simulator with customizable soundpacks"
 license = "MIT"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 base64 = "0.22"
@@ -23,7 +21,6 @@ once_cell = "1.21.3"
 open = "5.3.0"
 rand = "0.9.0"
 rdev = { version = "0.5.3", features = ["unstable_grab"] }
-# Use rfd from dioxus-desktop (0.15.4) with tokio instead of async-std
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
 rodio = "0.20.1"
 cpal = "0.15"
@@ -76,7 +73,6 @@ winapi = { version = "0.3", features = [
   "winbase",
 ] }
 
-
 [build-dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1.0.140"
@@ -90,9 +86,15 @@ desktop = ["dioxus/desktop"]
 auto-update = []
 
 [profile.dev]
-# Optimize audio performance in dev builds while keeping debug symbols
 opt-level = 2
 debug = true
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
 
 [profile.wasm-dev]
 inherits = "dev"
@@ -104,36 +106,5 @@ inherits = "dev"
 [profile.android-dev]
 inherits = "dev"
 
-# DEB package configuration for Ubuntu/Debian
-[package.metadata.deb]
-maintainer = "Hải Nguyễn <hainguyen.ts13@gmail.com>"
-copyright = "2025, Hải Nguyễn <hainguyen.ts13@gmail.com>"
-extended-description = """\
-A modern mechanical keyboard sound simulator for Linux.
-Plays realistic keyboard sounds as you type with customizable soundpacks."""
-depends = "$auto, libasound2, libevdev2, libxdo3"
-section = "sound"
-priority = "optional"
-# `usr/lib/mechvibes-dx/assets` is not a free choice. dioxus-asset-resolver's
-# Linux branch (0.7.10 native.rs::get_asset_root) computes
-# `current_exe()/../../lib` - which is `/usr/lib` for a binary at
-# `/usr/bin/mechvibes-dx` - then scans it for the first subdirectory containing
-# an `assets/` folder. DIOXUS_PRODUCT_NAME is not baked into a plain
-# `cargo build --release`, so that scan is the path that actually runs. Put the
-# fonts anywhere else and every `asset!()` font silently falls back to a system
-# font. The AppImage places them at the same relative location for the same
-# reason, so one binary serves both packages.
-assets = [
-  ["target/release/mechvibes-dx", "usr/bin/", "755"],
-  ["assets/**/*", "usr/lib/mechvibes-dx/assets/", "644"],
-  ["assets/icon.png", "usr/share/icons/hicolor/512x512/apps/mechvibes-dx.png", "644"],
-  ["mechvibes-dx.desktop", "usr/share/applications/", "644"],
-  ["README.md", "usr/share/doc/mechvibes-dx/", "644"],
-  ["soundpacks/**/*", "usr/share/mechvibes-dx/soundpacks/", "644"],
-]
-
-# Local patch: wraps rdev's TIS* API calls in dispatch::Queue::main().exec_sync()
-# to fix EXC_BREAKPOINT crash on macOS Sequoia+ (HIToolbox requires main queue).
-# Remove this once rdev publishes a release with the upstream fix.
 [patch.crates-io]
 rdev = { path = "patches/rdev" }

@@ -3,13 +3,11 @@ use rodio::buffer::SamplesBuffer;
 use rodio::{ OutputStream, OutputStreamHandle, Sink };
 use std::collections::HashMap;
 use std::sync::{ Arc, OnceLock };
-use std::time::Duration;
 
 use crate::libs::device_manager::DeviceManager;
 
 const FADE_IN_MS: f32 = 2.0;
 const FADE_OUT_MS: f32 = 5.0;
-const EVICT_RAMP_MS: u64 = 10;
 const MAX_VOICES: usize = 32;
 
 /// (samples, channels, sample_rate) for a decoded/resampled audio buffer.
@@ -415,23 +413,12 @@ fn apply_fade(samples: &mut [f32], channels: u16, sample_rate: u32) {
     }
 }
 
-/// Removes finished sinks, then evicts the oldest voice (ramped down to
-/// avoid a click) if the pool is still at or above `max_voices`.
 fn manage_active_sinks(sinks: &mut Vec<Sink>, max_voices: usize) {
     sinks.retain(|s| !s.empty());
 
     if sinks.len() >= max_voices {
         let old_sink = sinks.remove(0);
-        std::thread::spawn(move || {
-            const STEPS: u32 = 10;
-            let starting_volume = old_sink.volume();
-            for step in 1..=STEPS {
-                let gain = starting_volume * (1.0 - (step as f32) / (STEPS as f32));
-                old_sink.set_volume(gain.max(0.0));
-                std::thread::sleep(Duration::from_millis(EVICT_RAMP_MS / (STEPS as u64)));
-            }
-            old_sink.stop();
-        });
+        old_sink.stop();
     }
 }
 
