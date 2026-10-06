@@ -157,12 +157,20 @@ fn SoundpackDropdown(soundpack_type: SelectorType, icon: Element, label: String)
 
         filtered_packs
     });
-    let current_soundpack = use_memo(
-        move ||
-            soundpacks()
-                .into_iter()
-                .find(|pack| pack.folder_path == current()) // Use folder_path for comparison
-    ); // Get appropriate placeholder and search text based on type
+    let current_soundpack = use_memo(move || {
+        let packs = soundpacks();
+        if let Some(pack) = packs.iter().find(|p| p.folder_path == current()) {
+            return Some(pack.clone());
+        }
+        packs.into_iter().find(|p| match soundpack_type {
+            SelectorType::Keyboard => {
+                p.soundpack_type == crate::state::soundpack::SoundpackType::Keyboard
+            }
+            SelectorType::Mouse => {
+                p.soundpack_type == crate::state::soundpack::SoundpackType::Mouse
+            }
+        })
+    }); // Get appropriate placeholder and search text based on type
     let (placeholder_text, search_placeholder, not_found_text, no_soundpack_text) = match
         soundpack_type
     {

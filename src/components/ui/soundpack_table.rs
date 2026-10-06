@@ -334,27 +334,33 @@ pub fn SoundpackTableRow(soundpack: SoundpackMetadata, is_new: bool) -> Element 
               onclick: on_open_folder,
               FolderOpen { class: "w-4 h-4" }
             }
-            button {
-              class: "btn btn-soft btn-error btn-xs",
-              title: "Delete this soundpack",
-              onclick: move |_| {
-                  eval(
-                      &format!(
-                          "document.getElementById(\"confirm_delete_modal_{}\").showModal()",
-                          soundpack.id,
-                      ),
-                  );
-              },
-              Trash { class: "w-4 h-4" }
+            if !crate::state::paths::soundpacks::is_builtin_soundpack(&soundpack.id)
+                && !crate::state::paths::soundpacks::is_builtin_soundpack(&soundpack.folder_path)
+            {
+              button {
+                class: "btn btn-soft btn-error btn-xs",
+                title: "Delete this soundpack",
+                onclick: {
+                  let modal_id = format!("confirm_delete_modal_{}", soundpack.id.replace(['/', '\\'], "_"));
+                  move |_| {
+                    eval(&format!("document.getElementById(\"{}\").showModal()", modal_id));
+                  }
+                },
+                Trash { class: "w-4 h-4" }
+              }
             }
           }
         }
       }
-      // Delete confirmation modal
-      ConfirmDeleteModal {
-        modal_id: format!("confirm_delete_modal_{}", soundpack.id),
-        soundpack_name: soundpack.name.clone(),
-        on_confirm: on_confirm_delete,
+      // Delete confirmation modal (custom packs only)
+      if !crate::state::paths::soundpacks::is_builtin_soundpack(&soundpack.id)
+          && !crate::state::paths::soundpacks::is_builtin_soundpack(&soundpack.folder_path)
+      {
+        ConfirmDeleteModal {
+          modal_id: format!("confirm_delete_modal_{}", soundpack.id.replace(['/', '\\'], "_")),
+          soundpack_name: soundpack.name.clone(),
+          on_confirm: on_confirm_delete,
+        }
       }
     }
 }
