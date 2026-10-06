@@ -79,6 +79,7 @@ pub fn read_file_contents(path: &str) -> Result<String, String> {
 }
 
 /// Write string contents to file
+#[allow(dead_code)]
 pub fn write_file_contents(path: &str, contents: &str) -> Result<(), String> {
     fs::write(path, contents).map_err(|e| format!("Failed to write file '{}': {}", path, e))
 }

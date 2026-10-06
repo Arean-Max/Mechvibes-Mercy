@@ -55,6 +55,7 @@ pub fn get_soundpack_id_from_zip(file_path: &str) -> Result<String, String> {
 
 /// Extract and install soundpack from ZIP file with specified target type
 // Structure to hold soundpack information after extraction
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct SoundpackInfo {
     pub name: String,

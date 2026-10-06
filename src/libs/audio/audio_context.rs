@@ -93,6 +93,7 @@ impl AudioContext {
         self.send(AudioCommand::SetVolume(volume));
     }
 
+    #[allow(dead_code)]
     pub fn get_volume(&self) -> f32 {
         AUDIO_VOLUME.get()
             .and_then(|v| v.lock().ok())
@@ -110,6 +111,7 @@ impl AudioContext {
         self.send(AudioCommand::SetMouseVolume(volume));
     }
 
+    #[allow(dead_code)]
     pub fn get_mouse_volume(&self) -> f32 {
         MOUSE_AUDIO_VOLUME.get()
             .and_then(|v| v.lock().ok())
@@ -125,6 +127,7 @@ impl AudioContext {
             .unwrap_or(true)
     }
 
+    #[allow(dead_code)]
     pub fn is_keyboard_sound_enabled(&self) -> bool {
         ENABLE_KEYBOARD_SOUND.get()
             .and_then(|v| v.lock().ok())
@@ -132,6 +135,7 @@ impl AudioContext {
             .unwrap_or(true)
     }
 
+    #[allow(dead_code)]
     pub fn is_mouse_sound_enabled(&self) -> bool {
         ENABLE_MOUSE_SOUND.get()
             .and_then(|v| v.lock().ok())

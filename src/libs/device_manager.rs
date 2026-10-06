@@ -456,6 +456,7 @@ impl DeviceManager {
     }
 
     /// Get cached input devices (no enumeration - instant)
+    #[allow(dead_code)]
     pub fn get_cached_input_devices() -> Result<Vec<DeviceInfo>, String> {
         crate::always_print!("📋 [DeviceCache] Returning cached input devices...");
         if let Some(cache) = CACHED_INPUT_DEVICES.get() {

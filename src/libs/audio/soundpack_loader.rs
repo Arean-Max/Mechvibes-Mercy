@@ -23,6 +23,7 @@ fn determine_soundpack_type(soundpack_id: &str) -> crate::state::soundpack::Soun
 /// to know the outcome should watch `UiEvent::PackLoaded` (see `ui.rs`)
 /// rather than this function's return value, which only reflects whether
 /// the request was sent.
+#[allow(dead_code)]
 pub fn load_soundpack(context: &AudioContext) -> Result<(), String> {
     let config = crate::state::config_writer::current();
     load_keyboard_soundpack(context, &config.keyboard_soundpack)?;
